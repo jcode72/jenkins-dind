@@ -1,12 +1,49 @@
 version: "3"
 services:
+  # This contains jenkins and docker. If you want, you can avoid
+  # installing docker by making use of the dind container below
   jenkins: 
     build: .
     privileged: true
+    user: root
     volumes:
-      - ./plugins:/var/jenkins_home/plugins
+      - ./plugins:/var/jenkins_home/plugin
+      - ./supervisord.ini:/etc/supervisor.d/supervisord.ini
+      # We have docker installed in the image but we dont need to
+      # we can mount the docker command right here (not tested)
+      #- /usr/local/bin/docker:/usr/local/bin/docker
+      # Mounting the docker.sock lets our docker client talk to
+      # the host containers
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      JAVA_OPTS: "-Djava.awt.headless=true"
+      - JAVA_OPTS=-Djava.awt.headless=true
+      # Uncomment this line if you want to
+      # build containers in dind
+      #- DOCKER_HOST=tcp://dind:2375
     ports:
       - 50000:50000
       - 8080:8080
+    networks:
+      - jenkins_dind
+  # You can use this container as an alternative to
+  # installing docker inside your jenkins container
+  dind:
+    image: docker:dind
+    privileged: true
+    container_name: dind
+    user: root
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    expose:
+      -  2375
+    networks:
+      - jenkins_dind
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+    # This will run a second daemon that points
+    # to the internal docker
+    command: "dockerd -H tcp://0.0.0.0:2375"
+
+networks:
+  jenkins_dind:
+    driver: bridge
