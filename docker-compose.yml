@@ -7,7 +7,9 @@ services:
     privileged: true
     user: root
     volumes:
-      - ./plugins:/var/jenkins_home/plugin
+      # Mount the jenkins_home so we dont loose any
+      # jobs we created if we loose the container
+      - ./jenkins_home:/var/jenkins_home
       - ./supervisord.ini:/etc/supervisor.d/supervisord.ini
       # We have docker installed in the image but we dont need to
       # we can mount the docker command right here (not tested)
@@ -32,8 +34,9 @@ services:
     privileged: true
     container_name: dind
     user: root
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      # volumes:
+      # we really dont need this mount at all
+      #- /var/run/docker.sock:/var/run/docker.sock
     expose:
       -  2375
     networks:
